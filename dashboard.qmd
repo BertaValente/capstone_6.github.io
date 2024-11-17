@@ -1,0 +1,781 @@
+---
+title: "Obesity and Socioeconomic Status in Portugal: Evidence from the 2005 National Survey"
+format: dashboard
+theme: lux
+date: "r Sys.Date()"
+output-file: "dashboard.html"
+execute:
+  echo: false
+  warning: false
+  message: false
+includes:
+  in_header: |
+    <style>
+      #logo {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+      }
+    </style>
+---
+
+```{r}
+# install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+# install.packages("readxl", repos = "http://cran.us.r-project.org")
+# install.packages("lubridate", repos = "http://cran.us.r-project.org")
+# install.packages("janitor")
+# install.packages("data.table", repos = "http://cran.us.r-project.org")
+# install.packages("here")
+# install.packages("haven")
+# install.packages("rio")
+# install.packages("skimr")
+# install.packages("ggplot2")
+# install.packages("tab")
+# install.packages("sjPlot")
+# install.packages("gtsummary")
+# install.packages("gt")
+# install.packages("broom")
+# install.packages("gtable")
+# install.packages("performance")
+#install.packages("RColorBrewer")
+
+
+library(janitor)
+library(tidyverse)  
+library(lubridate)
+library(data.table)
+library(here)
+library(haven)
+library(rio)
+library(dplyr)
+library(skimr)
+library(ggplot2)
+library(tab)
+library(sjPlot)
+library(gtsummary)
+library(gt)
+library(broom)
+library (gtable)
+library(performance)
+library(RColorBrewer)
+
+
+
+```
+
+```{r}
+rm(list = ls(all.names = TRUE)) 
+```
+
+```{r}
+set.seed(123)
+```
+
+```{r}
+subset_2005 <- import("subset_2005.csv") |>
+  clean_names() |>  
+  mutate(
+    v1 = replicate(n(), paste0(sample(c(0:9, letters), 3, replace = TRUE), collapse = ""))
+  ) 
+
+```
+
+```{r}
+
+
+subset_2005 <- subset_2005 |> 
+    mutate(sex = case_when(
+    sex == 1 ~ "male",
+    sex == 2 ~ "female",
+    TRUE ~ as.character(sex)
+  ))
+
+#subset_2005 |> 
+  #count(sex)
+
+```
+
+```{r}
+subset_2005 <- subset_2005 |> 
+  mutate(age = case_when(
+    age == 1 ~ "0",
+    age == 2 ~ "1-4",
+    age == 3 ~ "5-9",
+    age == 4 ~ "10-14",
+    age == 5 ~ "15-19",
+    age == 6 ~ "20-24",
+    age == 7 ~ "25-29",
+    age == 8 ~ "30-34",
+    age == 9 ~ "35-39",
+    age == 10 ~ "40-44",
+    age == 11 ~ "45-49",
+    age == 12 ~ "50-54",
+    age == 13 ~ "55-59",
+    age == 14 ~ "60-64",
+    age == 15 ~ "65-69",
+    age == 16 ~ "70-74",
+    age == 17 ~ "75-79",
+    age == 18 ~ "80-84",
+    age == 19 ~ ">=85",
+    TRUE ~ NA_character_  
+  )) |> 
+  filter(!(age %in% c("0", "1-4", "5-9", "10-14", "15-19", "65-69", "70-74", "75-79", "80-84", ">=85")))
+
+
+
+```
+
+```{r}
+
+subset_2005 <- subset_2005 |> 
+    mutate(
+    highest_edu = case_when(
+      as.numeric(highest_edu) == 1 ~ 1,
+      as.numeric(highest_edu) == 2 ~ 2,
+      as.numeric(highest_edu) == 3 ~ 2,  
+      as.numeric(highest_edu) == 4 ~ 3,
+      as.numeric(highest_edu) == 5 ~ 4,
+      as.numeric(highest_edu) == 6 ~ 5,
+      as.numeric(highest_edu) == 7 ~ 6,
+      as.numeric(highest_edu) == 99 ~ NA_real_
+    )
+  )
+
+
+subset_2005 <- subset_2005 |> 
+  mutate(
+    highest_edu = factor(highest_edu, 
+                         levels = c(1, 2, 3, 4, 5, 6),
+                         labels = c("none",
+                                    "6th grade",
+                                    "9th grade",
+                                    "12th grade",
+                                    "post-secondary education",
+                                    "higher education (BSc, MSc, PhD)"
+                                     ))  
+  )
+
+
+```
+
+```{r}
+
+subset_2005 <- subset_2005 |> 
+  mutate(
+    occup = as.character(occup)
+  ) |> 
+  mutate(
+    occup = case_when(
+      occup == "1" ~ "9",
+      occup == "2" ~ "10",
+      occup == "3" ~ "7",
+      occup == "4" ~ "6",
+      occup == "5" ~ "5",
+      occup == "6" ~ "4",
+      occup == "7" ~ "5",
+      occup == "8" ~ "3",
+      occup == "9" ~ "2",
+      occup == "10" ~ "8",
+      occup == "97" ~ "1",
+      occup == "99" ~ NA_character_,  
+      occup == "NA" ~ NA_character_,  
+      TRUE ~ occup  
+    )
+  )
+
+subset_2005 <- subset_2005 |> 
+  mutate(
+    occup = factor(
+      occup,
+      levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), 
+      labels = c("unemployed",
+                 "unskilled workers",
+                 "plant and machine operators, and assembly workers",
+                 "farmers and skilled agricultural and fisheries workers",
+                 "laborers, craftsmen, service and sales staff",
+                 "administrative and similar staff",
+                 "technicians and mid-level professionals",
+                 "professional military",
+                 "public administration senior managers, managers and senior managers of companies",
+                 "specialists in the intellectual and scientific professions")))
+  
+
+
+
+
+```
+
+```{r}
+
+subset_2005 <- subset_2005 |> 
+  mutate(
+    income = case_when(
+      income == 98 ~ NA_real_,
+      income == 99 ~ NA_real_,
+      TRUE ~ income
+    )
+  )
+
+# Calcular os pontos de corte dos quintis
+quintile_cuts <- quantile(subset_2005$income, probs = seq(0, 1, 0.2), na.rm = TRUE)
+
+# Criar a variável income_quintile usando os pontos de corte
+subset_2005_new <- subset_2005 |> 
+  mutate(
+    income_quintile = cut(
+      income,
+      breaks = quintile_cuts,
+      include.lowest = TRUE,
+      labels = 1:5
+    )
+  )
+
+# Verificar a distribuição dos quintis
+quintile_distribution <- table(subset_2005$income_quintile)
+quintile_proportion <- prop.table(quintile_distribution)
+
+# Imprimir os resultados
+# print(quintile_distribution)
+# print(quintile_proportion)
+
+# Remover valores inválidos
+subset_2005 <- subset_2005 |>
+  mutate(
+    income = case_when(
+      income == 98 ~ NA_real_,
+      income == 99 ~ NA_real_,
+      TRUE ~ income
+    )
+  )
+
+# Calcular os pontos de corte dos quintis
+quintile_cuts <- quantile(subset_2005$income, probs = seq(0, 1, 0.2), na.rm = TRUE)
+
+# # Criar a variável income_quintile usando os pontos de corte
+subset_2005 <- subset_2005 |>
+  mutate(
+    income_quintile = cut(
+      income,
+      breaks = quintile_cuts,
+      include.lowest = TRUE,
+      labels = 1:5
+    )
+  )
+
+# # # Criar tabela de frequência dos quintis
+quintile_distribution <- table(subset_2005_new$income_quintile)
+quintile_proportion <- prop.table(quintile_distribution)
+
+```
+
+```{r}
+### Altura sem sapatos (cm) e Peso sem roupa (kg)
+
+subset_2005 <- subset_2005 |> 
+    mutate(
+    height = na_if(height, 997),
+    height = na_if(height, 999),
+    weight = na_if(weight, 997),
+    weight = na_if(weight, 999))
+  
+```
+
+```{r}
+
+subset_2005 <- subset_2005 |> 
+  mutate(
+    height_m = height / 100,  
+    bmi = weight / (height_m ^ 2)  
+  )
+```
+
+```{r}
+
+
+subset_2005  <- subset_2005|> 
+  mutate(bmi_cat = case_when(
+    bmi < 18.5 ~ 1,
+    bmi >= 18.5 & bmi < 25 ~ 2,
+    bmi >= 25 & bmi < 30 ~ 3,
+    bmi >= 30 ~ 4),
+  
+  bmi_cat = factor(bmi_cat, 
+                   levels = c(1, 2, 3, 4), 
+                   labels = c("underweight", "normal weight", "overweight", "obesity")))
+
+
+
+```
+
+```{r}
+
+
+
+subset_2005 <- subset_2005 |> 
+  mutate(income = case_when(
+    income_quintile == 1 ~ "1st quintile",
+    income_quintile == 2 ~ "2nd quintile",
+    income_quintile == 3 ~ "3rd quintile",
+    income_quintile == 4 ~ "4th quintile",
+    income_quintile == 5 ~ "5th quintile",
+    TRUE ~ as.character(income_quintile) 
+  ),
+  "Income quintiles" = income_quintile,
+  Age = age,
+  Sex = sex,
+  "Highest education level" = highest_edu,
+  "Body Mass Index (m2/kg)" = bmi_cat,
+  "Height (cm)" = height,
+  "Weight (kg)" = weight)
+
+
+
+
+table1_sex <- tbl_summary(
+  subset_2005,
+  include = c("Age", "Sex", "Highest education level", "income", "Body Mass Index (m2/kg)", "Height (cm)", "Weight (kg)"),
+  by = Sex,
+  missing = "no",
+  statistic = list(
+    all_continuous() ~ "{mean} ({sd})",
+    all_categorical() ~ "{n} ({p}%)"
+  )
+) |> 
+  add_n() |>
+  modify_header(label = "**Variable**") |>
+  bold_labels()
+
+table1_sex_f <- as_gt(table1_sex) |> 
+  tab_header(
+    title = md("**Participant Characteristics**"),
+    subtitle = "by sex"
+  ) |>
+  tab_source_note(
+    source_note = md("Source: INE,2005")
+  ) |>
+  fmt_number(columns = everything(), decimals = 2) |>
+  opt_stylize(style = 1, color = "gray") |>
+  cols_align(align = "left", columns = everything()) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(columns = "label")
+  ) |>
+  tab_style(
+    style = cell_text(align = "center"),
+    locations = cells_title(groups = c("title", "subtitle"))
+  )
+
+
+# table1_sex_f
+
+```
+
+
+# Population characteristics
+
+##  {.sidebar}
+
+::: {.callout-note collapse="true"}
+## 
+
+**Development**
+
+Berta Valente bmv.santos@ensp.unl.pt
+
+&
+
+Joana Lamego jfm.lamego@ensp.unl.pt
+
+
+**Data source**
+
+Anonymized subset of the 2005 National Health Survey, provided by INE 
+:::
+
+::: {.callout-warning collapse="true"}
+**Last Updated** 
+`r format(Sys.Date(), "%d %B %Y")` 
+:::
+
+<!-- Adicionando a imagem centrada -->
+<div style="position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px;">
+  <img src="https://www.unl.pt/wp-content/uploads/2024/08/ENSP_color.png" style="width: 150px; height: auto;">
+</div>
+
+
+
+## Column {width="45%"}
+
+```{r}
+
+# Função para formatação de números com vírgula como separador decimal
+abs_virgula <- function(x) {
+  format(abs(x), big.mark = ".", decimal.mark = ",", scientific = FALSE)
+}
+
+# Preparação dos dados para a pirâmide etária
+piramide <- subset_2005 |> 
+  group_by(age, sex) |> 
+  summarise(pop = n(), .groups = "drop") |> 
+  mutate(
+    pop = ifelse(sex == "female", pop, -pop),
+    sex = factor(sex, levels = c("male", "female"))
+  )
+
+# Gráfico da pirâmide etária
+ggplot(piramide, aes(x = age, y = pop, fill = sex)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  scale_y_continuous(labels = abs_virgula) +
+  scale_fill_manual(values = c("male" = "#FF8F4C", "female" = "#FFD1A3")) +
+  coord_flip() +
+  labs(
+    title = "Age-Sex Population Pyramid",
+    x = NULL,
+    y = "Population",
+    caption = "Source: INE, 2005",
+    fill = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    text = element_text(),
+    plot.title = element_text(face = "bold", hjust = 0.5, color = "gray30", size = 16),
+    axis.title = element_text(size = 12, color = "gray30"),
+    axis.text = element_text(size = 11, color = "gray30"),
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+```
+
+
+
+## Row {.tabset}
+
+### Education
+
+```{r}
+
+edu_percentage <- subset_2005 |> 
+  filter(!is.na(highest_edu)) |> 
+  count(highest_edu) |> 
+  mutate(percentage = n / sum(n) * 100) |> 
+  mutate(highlight = ifelse(percentage == max(percentage), "highlight", "normal"))
+
+# Plot com cor diferenciada para a barra de maior percentagem
+ggplot(edu_percentage, aes(x = highest_edu, y = percentage, fill = highlight)) +
+  geom_bar(stat = "identity", width = 0.7) +  
+  scale_fill_manual(values = c("highlight" = "#FF8F4C", "normal" = "#FFC980"), guide = "none") +
+  labs(
+    title = "Educational Levels",
+    x = NULL,
+    y = "Percentage (%)",
+    caption = "Source: INE, 2005"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5, color = "gray30"),
+    axis.text.x = element_text(hjust = 1, size = 12, color = "gray40"),
+    axis.text.y = element_text(size = 12, color = "gray40"),
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 14, color = "gray40"),
+    axis.ticks = element_blank(),
+    plot.margin = margin(10, 20, 10, 10) 
+  ) +
+  coord_flip()
+
+
+```
+
+### Ocupation
+
+```{r, fig.width=18, fig.height=13}
+
+
+subset_2005 <- subset_2005 |> 
+  filter(!is.na(occup))
+
+# Nova ordem das ocupações
+occupation_order <- c(
+  "unemployed",
+  "unskilled workers",
+  "plant and machine operators, and assembly workers",
+  "farmers and skilled agricultural and fisheries workers",
+  "laborers, craftsmen, service and sales staff",
+  "administrative and similar staff",
+  "technicians and mid-level professionals",
+  "professional military",
+  "public administration senior managers, managers and senior managers of companies",
+  "specialists in the intellectual and scientific professions"
+)
+
+occup_percentage <- subset_2005 |> 
+  count(occup) |> 
+  mutate(
+    percentage = n / sum(n) * 100,
+    occup = str_wrap(occup, width = 35),  # Aumentei um pouco a largura para melhor distribuição do texto
+    # Converter occup para fator com a nova ordem
+    occup = factor(occup, levels = str_wrap(occupation_order, width = 35))
+  )
+
+ggplot(occup_percentage, aes(x = occup, y = percentage)) +
+  geom_bar(aes(fill = percentage), stat = "identity", show.legend = FALSE) +  
+  theme_minimal() + 
+  coord_flip() +  
+  labs(
+    title = "Occupation Levels",
+    x = NULL,
+    y = "Percentage (%)",
+    caption = "Source: INE, 2005"
+  ) +
+  scale_fill_gradient(low = "#FFD1A3", high = "#FF8F4C") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme(
+    axis.text.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18, hjust = 1),
+    axis.title.x = element_text(size = 18),
+    plot.title = element_text(face = "bold", hjust = 0.5, color = "gray30", size = 22),
+    plot.margin = margin(t = 20, r = 30, b = 10, l = 30),
+    plot.caption = element_text(size = 16),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+    
+  )
+
+```
+
+### Income 
+
+```{r}
+
+# Preparar os dados
+quintile_df <- as.data.frame(quintile_proportion) |> 
+  rename(Quintil = Var1, Percentagem = Freq) |> 
+  mutate(Percentagem = Percentagem * 100)
+
+# Identificar a categoria com a maior percentagem
+max_percent <- max(quintile_df$Percentagem)
+quintile_df <- quintile_df |> 
+  mutate(highlight = ifelse(Percentagem == max_percent, "Maior", "Normal"))
+
+# Plot
+ggplot(quintile_df, aes(x = Quintil, y = Percentagem, fill = highlight)) +
+  geom_bar(stat = "identity", width = 0.8, show.legend = FALSE) + 
+  scale_fill_manual(values = c("Maior" = "#FF8F4C", "Normal" = "#FFD1A3")) +
+  labs(
+    title = "Income Quintiles",
+    x = "Quintiles",
+    y = "Percentage (%)",
+    caption = "Source: INE, 2005"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16, color = "gray30"),
+    plot.caption = element_text(size = 10, color = "gray50", hjust = 0),
+    axis.title = element_text( size = 12, color = "gray40"),
+    axis.text = element_text(size = 12, color = "gray50"),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    plot.margin = margin(10, 15, 10, 15)
+  ) +
+  coord_flip()  # Flip the axes for better readability
+
+
+```
+
+# Obesity prevalence
+
+## Row {.tabset}
+
+### Education
+
+```{r}
+
+obesity_summary_by_education <- subset_2005 |> 
+  filter(!is.na(bmi_cat), !is.na(highest_edu)) |>   
+  group_by(highest_edu) |> 
+  summarise(
+    total_count = n(), 
+    obesity_count = sum(bmi_cat == "obesity", na.rm = TRUE)  
+  ) |> 
+  mutate(prevalence = (obesity_count / total_count) * 100)  
+
+# Ordem dos níveis educacionais
+education_order <- c("none",
+                     "6th grade",
+                     "9th grade",
+                     "12th grade", 
+                     "post-secondary education",
+                     "higher education (BSc, MSc, PhD)")
+
+# Reordenar as categorias educacionais
+obesity_summary_by_education <- obesity_summary_by_education |> 
+  mutate(highest_edu = factor(highest_edu,
+                              levels = education_order))
+
+# Gráfico
+p <- ggplot(obesity_summary_by_education, aes(x = highest_edu, y = prevalence, fill = highest_edu)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +  # Largura das barras ajustada
+  labs(
+    title = "Obesity Prevalence",
+    subtitle = "by Educational Level",
+    x = NULL,  
+    y = "Prevalence (%)",
+    caption = "Source: INE, 2005",
+    fill = "Educational Level"  
+  ) +  
+  theme_minimal(base_size = 14) +
+    scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Show y-axis as percentage
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, color = "gray30", size = 16),  # Título mais destacado
+    plot.subtitle = element_text(size = 12, face = "italic", color = "gray50", hjust = 0.5),  # Subtítulo mais suave
+    plot.caption = element_text(hjust = 1, size = 10, color = "gray60"),  # Alinhar legenda à direita
+    axis.title = element_text(size = 12, color = "gray30"),
+    axis.text.x = element_text(size = 12, hjust = 1, color = "gray50"),  # Rótulos do eixo X mais legíveis
+    axis.text.y = element_text(size = 12, color = "gray50"),
+    axis.ticks.x = element_blank(),  # Remover ticks no eixo X
+    axis.ticks.y = element_blank(),  
+    panel.grid.major = element_blank(),  
+    panel.grid.minor = element_blank(), 
+    legend.position = "none",  # Remover legenda
+    plot.margin = margin(t = 15, r = 10, b = 15, l = 10)  # Ajustar margens para mais espaço
+  ) +
+  scale_fill_manual(values = rev(RColorBrewer::brewer.pal(length(education_order), "Oranges"))) +  # Cores com paleta de laranja
+  scale_x_discrete(expand = c(0.15, 0.15)) +  # Ajuste de espaçamento nos rótulos do eixo X
+  coord_flip()  # Inverter os eixos para melhor visualização
+
+# Exibir o gráfico
+p
+```
+
+### Ocupation
+
+```{r, fig.width=15, fig.height=12}
+
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+# Exemplo de dados
+obesity_summary_by_occupation <- subset_2005 %>%
+  filter(!is.na(bmi_cat) & !is.na(occup) & occup != "") %>%
+  group_by(occup) %>%
+  summarise(
+    total_count = n(),
+    obesity_count = sum(bmi_cat == "obesity", na.rm = TRUE)
+  ) %>%
+  mutate(prevalence = (obesity_count / total_count) * 100)
+
+# Ordem das ocupações com str_wrap
+occupation_order <- str_wrap(c(
+  "unskilled workers",
+  "plant and machine operators, and assembly workers",
+  "farmers and skilled agricultural and fisheries workers",
+  "laborers, craftsmen, service and sales staff",
+  "administrative and similar staff",
+  "technicians and mid-level professionals",
+  "professional military",
+  "public administration senior managers, managers and senior managers of companies",
+  "specialists in the intellectual and scientific professions"
+), width = 30)
+
+# Ajustando as ocupações
+obesity_summary_by_occupation <- obesity_summary_by_occupation %>%
+  mutate(
+    occup = str_wrap(occup, width = 30),
+    occup = factor(occup, levels = occupation_order)
+  ) %>%
+  filter(!is.na(occup) & !is.na(prevalence) & occup != "")
+
+# Criando o gráfico
+p <- ggplot(obesity_summary_by_occupation, aes(x = occup, y = prevalence)) +
+  geom_bar(stat = "identity", width = 0.9, position = position_dodge(width = 0.8), fill = "#FFD1A3") +  # Cor fixa para todas as barras
+  labs(
+    title = "Obesity Prevalence",
+    subtitle = "by Occupational Level",
+    x = NULL,
+    y = "Prevalence (%)",
+    caption = "Source: INE, 2005"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme(
+    text = element_text(size = 12),
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5, color = "gray30"),
+    plot.subtitle = element_text(size = 16, face = "italic", color = "gray20", hjust = 0.5),
+    axis.title = element_text(size = 16),
+    axis.text.x = element_text(size = 16, hjust = 1),
+    axis.text.y = element_text(size = 16),
+    axis.ticks.x = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(t = 20, r = 30, b = 10, l = 30),
+    plot.caption = element_text(size = 14)
+  ) +
+  coord_flip()
+
+# Exibindo o gráfico
+p
+```
+
+### Income
+
+```{r}
+obesity_summary_by_income_quintile <- subset_2005 |>  
+  filter(!is.na(bmi_cat) & !is.na(income_quintile)) |>  
+  group_by(income_quintile) |> 
+  summarise(
+    total_count = n(),  
+    obesity_count = sum(bmi_cat == "obesity", na.rm = TRUE)  
+  ) |> 
+  mutate(prevalence = (obesity_count / total_count) * 100)  
+
+# Option 1: Create a custom darker orange palette by selecting specific shades
+orange_palette <- brewer.pal(9, "Oranges")[3:7]  # Using shades 3-7 from a 9-color palette for darker options
+
+# Option 2: Alternative approach with manual darker orange colors
+# orange_palette <- c("#FD8D3C", "#F16913", "#D94801", "#A63603", "#7F2704")
+
+p <- ggplot(obesity_summary_by_income_quintile, aes(x = as.factor(income_quintile), y = prevalence, fill = prevalence)) +
+  geom_bar(stat = "identity", width = 0.9) +
+  labs(
+    title = "Obesity Prevalence",
+    subtitle = "by Income quintiles",
+    x = "Quintiles",
+    y = "Prevalence (%)",
+    caption = "Source: INE, 2005"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Show y-axis as percentage
+  theme(
+    text = element_text(size = 13),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5, color = "gray30"),
+    plot.subtitle = element_text(size = 14, face = "italic", color = "gray20", hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text.x = element_text(size = 12, hjust = 1),
+    axis.text.y = element_text(size = 12),
+    axis.ticks.x = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = unit(c(1, 1, 1, 1), "cm")
+  ) +
+  scale_fill_gradientn(colors = orange_palette) +
+  coord_flip()
+
+p
+
+
+
+
+```
